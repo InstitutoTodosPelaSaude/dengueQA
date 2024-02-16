@@ -1,0 +1,15 @@
+# Gene map (genome annotation) of DENV-3 in GFF format.								
+# For gene map purposes we only need some of the columns. We substitute unused values with "." as per GFF spec.								
+# See GFF format reference at https://www.ensembl.org/info/website/upload/gff.html								
+seqname	source	feature	start	end	score	strand	frame	attribute
+NC_001475.2	RefSeq	gene	95	394	.	+	.	 gene_name "C"
+NC_001475.2	RefSeq	gene	437	934	.	+	.	 gene_name "prM"
+NC_001475.2	RefSeq	gene	935	2413	.	+	.	 gene_name "E"
+NC_001475.2	RefSeq	gene	2414	3469	.	+	.	 gene_name "NS1"
+NC_001475.2	RefSeq	gene	3470	4123	.	+	.	 gene_name "NS2A"
+NC_001475.2	RefSeq	gene	4124	4513	.	+	.	 gene_name "NS2B"
+NC_001475.2	RefSeq	gene	4514	6370	.	+	.	 gene_name "NS3"
+NC_001475.2	RefSeq	gene	6371	6751	.	+	.	 gene_name "NS4A"
+NC_001475.2	RefSeq	gene	6752	6820	.	+	.	 gene_name "2K"
+NC_001475.2	RefSeq	gene	6821	7564	.	+	.	 gene_name "NS4B"
+NC_001475.2	RefSeq	gene	7565	10264	.	+	.	 gene_name "NS5"
