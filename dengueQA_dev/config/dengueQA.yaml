@@ -21,3 +21,5 @@ dependencies:
   - numpy
   - matplotlib
   - epiweeks
+  - pycountry-convert
+  - pycountry
