@@ -11,12 +11,19 @@ dependencies:
 - iqtree
 - raxml
 - mafft
-- python=3.6*
+- augur
+- python=3.7*
 - pandas
 - biopython
+- blast
+- artemis
+- unidecode
+- snakemake-minimal
 - pip
 
 - pip:
   - numpy
   - matplotlib
   - epiweeks
+  - pycountry-convert
+  - pycountry

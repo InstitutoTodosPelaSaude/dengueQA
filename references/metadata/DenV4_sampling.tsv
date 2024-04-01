@@ -1,0 +1,6 @@
+purpose	filter	value	filter2	value2	sample_size	start	end
+focus	serotype	DenV4	genotype	4I	50		
+focus	serotype	DenV4	genotype	4II	50		
+focus	serotype	DenV4	genotype	4III	50		
+focus	serotype	DenV4	genotype	4IV	50		
+focus	serotype	DenV4	genotype	Unassigned	50		
