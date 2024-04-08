@@ -98,11 +98,11 @@ if __name__ == '__main__':
         outdf[cds] = ''
 
         # Check if the folder exists
-        if not os.path.exists(os.getcwd() + '/' + target + '_alignments/'):
+        if not os.path.exists(os.getcwd() + '/output/alignment/' + target + '_alignments/'):
             # If it doesn't exist, create the folder
-            os.makedirs(os.getcwd() + '/' + target + '_alignments/')
+            os.makedirs(os.getcwd() + '/output/alignment/' + target + '_alignments/')
 
-        cds_alignment = open(os.getcwd() + '/' + target + '_alignments/' + target + '_' + cds + '.fasta', 'w')
+        cds_alignment = open(os.getcwd() + '/output/alignment/' + target + '_alignments/' + target + '_' + cds + '.fasta', 'w')
 
         for header in record_dict:
             sequence = str(record_dict[header].seq)

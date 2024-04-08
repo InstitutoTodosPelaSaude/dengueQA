@@ -23,6 +23,7 @@ if __name__ == '__main__':
     parser.add_argument("--remove", required=False, help="List of samples to be ignored in all samplings. It can be provided as a file (one genome name per line), or as a comma-separated string")
     parser.add_argument("--accno-column", required=True, type=str, help="Column showing sequence accession numbers (e.g. KY923048)")
     parser.add_argument("--genome-column", required=False, type=str, help="Column showing sequence names (e.g. USA/CT-CDC-LC0062417/2021)")
+    parser.add_argument("--time-unit", required=True, nargs=1, type=str,  default='month', choices=['week', 'month', 'year'], help="Unit of time to set up bins of the genomes from which they will be sampled")
     parser.add_argument("--scheme", required=True, help="Subsampling scheme")
     parser.add_argument("--report", required=False, help="Report listing samples per category")
     parser.add_argument("--output1", required=False, help="Text file with list of selected sequences by accession number")
@@ -34,6 +35,7 @@ if __name__ == '__main__':
     remove = args.remove
     genome_col = args.genome_column
     accno_col = args.accno_column
+    time_unit = args.time_unit[0]
     scheme = args.scheme
     report = args.report
     output1 = args.output1
@@ -146,11 +148,13 @@ if __name__ == '__main__':
     print('\n* Assigning epiweek column...')
     # get epiweek end date, create column
     dfN['date'] = pd.to_datetime(dfN['date'], errors='coerce')
-    dfN['epiweek'] = dfN['date'].apply(lambda x: Week.fromdate(x, system="cdc").enddate())
+    dfN['week'] = dfN['date'].apply(lambda x: Week.fromdate(x, system="cdc").enddate())
+    dfN['month'] = dfN['date'].dt.month
+    dfN['year'] = dfN['date'].dt.year
 
 
     ## SAMPLE FOCAL AND CONTEXTUAL SEQUENCES
-    print('\n* Filtering based on sampling scheme...')
+    print('\n* Filtering based on sampling scheme, according to bins grouped by ' + time_unit + '...')
     purposes = ['focus', 'context']
     subsamplers = [] # list of focal and contextual categories
     for category in purposes:
@@ -192,20 +196,23 @@ if __name__ == '__main__':
             dfFilter = dfFilter.loc[mask]  # apply mask
             # print(dfFilter[[genome_col, 'date']])
 
-            gEpiweek = dfFilter.groupby('epiweek')
+            # gEpiweek = dfFilter.groupby('epiweek')
+            gUnit = dfFilter.groupby(time_unit)
             sample_size = dfS.iloc[idx]['sample_size']
             total_genomes = dfFilter[filter1].count()
             # print(total_genomes, sample_size)
 
             drop_now = []
-            for epiweek, dfEpiweek in gEpiweek:
-                bin_pool = dfEpiweek['epiweek'].count() # genomes in bin
+            for unit, dfTimeUnit in gUnit:
+                bin_pool = dfTimeUnit[time_unit].count() # genomes in bin
+                # print(bin_pool)
                 sampled = int(np.ceil((bin_pool/total_genomes) * sample_size)) # proportion sampled from bin
+                # print(sampled)
                 if sampled > bin_pool: # if requested amount is higher than available genomes, get all
                     sampled = bin_pool
 
                 # genome selector
-                random_subset = dfEpiweek.sample(n=sampled)
+                random_subset = dfTimeUnit.sample(n=sampled)
                 for id in results.keys():
                     selected = random_subset[id].to_list()
                     results[id][filter1][value1] = results[id][filter1][value1] + selected

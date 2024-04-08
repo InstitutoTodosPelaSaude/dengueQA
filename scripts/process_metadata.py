@@ -23,7 +23,7 @@ if __name__ == '__main__':
     )
     parser.add_argument("--sequences", required=True, help="FASTA file")
     parser.add_argument("--metadata1", required=True, help="Metadata file of contextual sequences")
-    parser.add_argument("--metadata2", required=False, help="New metadata file of new sequencces")
+    parser.add_argument("--metadata2", required=False, help="Metadata file of new sequencces")
     parser.add_argument("--time-var", required=False, type=str, help="Time variable, when x variable is not temporal data")
     parser.add_argument("--start-date", required=False, type=str,  help="Start date in YYYY-MM-DD format")
     parser.add_argument("--end-date", required=False, type=str,  help="End date in YYYY-MM-DD format")

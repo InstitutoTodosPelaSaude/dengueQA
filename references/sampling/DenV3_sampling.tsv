@@ -1,0 +1,6 @@
+purpose	filter	value	filter2	value2	sample_size	start	end
+focus	serotype	DenV3	genotype	3I	20	2000-01-01	
+focus	serotype	DenV3	genotype	3II	20	2000-01-01	
+focus	serotype	DenV3	genotype	3III	20	2000-01-01	
+focus	serotype	DenV3	genotype	3V	20	2000-01-01	
+focus	serotype	DenV3	genotype	Unassigned	20	2000-01-01	

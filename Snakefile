@@ -1,45 +1,29 @@
+import os
+
 SAMPLES = [
 	"DenV1",
 	"DenV2",
 	"DenV3",
 	"DenV4"]
 
-
 rule all:
-	message:
-		"""
-		Execute all rules using terminal commands in a logical order.
-		"""
-	shell:
-		"""
-		snakemake --cores all test_results_go
-		"""
+	input:
+		qa_matrix = "output/matrix_dengue_qa.tsv",
+		coverage_matrix = "output/coverage/matrix_coverage.tsv",
+		outliers_matrix = "output/root2tip/matrix_outliers.tsv",
+		trees = expand("output/tree/{sample}_masked.tree", sample=SAMPLES)
 
 # Define file names
 rule files:
 	params:
 		new_genomes = "input/new_genomes.fasta",
+		orig_metadata = "input/pt_BR_all_itps_dengue-0-20240329000013.tsv",
 		references = "references/fasta/reference_genomes.fasta",
 		ref_typing = "references/fasta/reference_typing_s2.fasta",
 		ref_table = "references/fasta/reference_table.tsv",
 		blast_results = "output/blast/blast_results.tsv",
 		metadata_typing = "references/metadata/table_ncbi_s2.tsv",
-		orig_metadata = "input/pt_BR_all_itps_dengue-0-20240329000013.tsv",
-		new_metadata = "input/DenV_itps_metadata.tsv",
 		ref_dataset = "references/fasta/DenV_genomes_ncbi.fasta",
-
-
-		# sequence_dataset = "input_files/gisaid_hcov-19.fasta",
-		# metadata_gisaid = "input_files/metadata_nextstrain.tsv",
-		# corelab_metadata = "input_files/metadata_corelab.tsv",
-		# sample_metadata = "input_files/impacc-virology-clin-sample.csv",
-		# patient_metadata = "input_files/impacc-virology-clin-individ.csv",
-		# batch_layout = "input_files/batch_layout.csv",
-		# reference = "config/reference_seq.fasta",
-		# annotation = "config/sequence.gb",
-		# genemap = "config/genemap.gff",
-		# refgenome_size = "29903",
-		# max_missing = "30"
 files = rules.files.params
 
 
@@ -47,13 +31,12 @@ files = rules.files.params
 rule parameters:
 	params:
 		evalue = 1e-10,
-		mask_5prime = 142,
-		mask_3prime = 548,
 		bootstrap = 1, # default = 1, but ideally it should be >= 100
 		model = "GTR",
-		root = "JF912185",
-		clock_rate = 0.0003,
-		clock_std_dev = 0.0001,
+		clock_filter = 7,
+		clock_rate = 0.0007,
+		clock_std_dev = 0.00004,
+		root = "least-squares"#"min_dev"#
 parameters = rules.parameters.params
 
 
@@ -91,9 +74,9 @@ rule blast:
 		"""
 
 
-rule split_go:
-	input:
-		expand("output/sequences/{sample}_newsequences.fasta", sample=SAMPLES),
+# rule split_go:
+# 	input:
+# 		expand("output/sequences/{sample}_newsequences.fasta", sample=SAMPLES),
 
 rule split:
 	message:
@@ -130,36 +113,40 @@ rule split:
 
 
 
-rule alignref_go:
-	input:
-		expand("output/alignment/{sample}_alignref.fasta", sample=SAMPLES),
+# rule alignref_go:
+# 	input:
+# 		expand("output/alignment/{sample}_alignref.fasta", sample=SAMPLES),
 
 rule align_reference:
 	message:
 		"""
-		Align newly sequenced genomes with there reference genomes
+		Align newly sequenced genomes with their reference genomes
 		"""
 	input:
 		sequences = rules.split.output.typeseq,
 		reference = rules.split.output.refseq
 	params:
-		threads = options.threads
+		threads = options.threads,
 	output:
 		alignment = "output/alignment/{sample}_alignref.fasta"
 	shell:
 		"""
-		augur align \
-			--sequences {input.sequences} \
-			--reference-sequence {input.reference} \
-			--nthreads {params.threads} \
-			--output {output.alignment}
+		if [ -s {input.sequences} ]; then
+			augur align \
+				--sequences {input.sequences} \
+				--reference-sequence {input.reference} \
+				--nthreads {params.threads} \
+				--output {output.alignment}
+		else
+			echo "The input sequences file {input.sequences} is empty, skipping alignment."
+			touch {output.alignment}
+		fi
 		"""
 
 
-
-rule coverage_go:
-	input:
-		expand("output/coverage/{sample}_coverage.tsv", sample=SAMPLES),
+# rule coverage_go:
+# 	input:
+# 		expand("output/coverage/{sample}_coverage.tsv", sample=SAMPLES),
 
 rule coverage:
 	message:
@@ -179,22 +166,27 @@ rule coverage:
 		coverage = "output/coverage/{sample}_coverage.tsv"
 	shell:
 		"""
-		python scripts/genome_coverage.py \
-			--input {input.alignment} \
-			--reftable {input.reftable} \
-			--gff {input.gff_file} \
-			--target {params.target} \
-			--seqcol {params.seqcol} \
-			--typecol {params.typecol} \
-			--refcol {params.refcol} \
-			--output {output.coverage}
+		if [ -s {input.alignment} ]; then
+			python scripts/genome_coverage.py \
+				--input {input.alignment} \
+				--reftable {input.reftable} \
+				--gff {input.gff_file} \
+				--target {params.target} \
+				--seqcol {params.seqcol} \
+				--typecol {params.typecol} \
+				--refcol {params.refcol} \
+				--output {output.coverage}
+		else
+			echo "The input alignment file {input.alignment} is empty, skipping coverage assessment."
+			touch {output.coverage}
+		fi
 		"""
 
 
 
-rule selection_go:
-	input:
-		expand("output/sequences/{sample}_list.txt", sample=SAMPLES),
+# rule selection_go:
+# 	input:
+# 		expand("output/sequences/{sample}_list.txt", sample=SAMPLES),
 
 rule selection:
 	message:
@@ -203,27 +195,36 @@ rule selection:
 		"""
 	input:
 		metadata = files.metadata_typing,
-		sampling = "references/metadata/{sample}_sampling.tsv"
+		sampling = "references/sampling/{sample}_sampling.tsv",
+		coverage = rules.coverage.output.coverage,
 	params:
-		index = "strain"
+		index = "strain",
+		unit = "month"
 	output:
 		report = "output/sequences/{sample}_stats.txt",
 		list = "output/sequences/{sample}_list.txt"
 	shell:
-		"""		
-		python scripts/genome_selector.py \
-			--metadata {input.metadata} \
-			--accno-column {params.index} \
-			--scheme {input.sampling} \
-			--report {output.report} \
-			--output1 {output.list}
+		"""
+		if [ -s {input.coverage} ]; then
+			python scripts/genome_selector.py \
+				--metadata {input.metadata} \
+				--accno-column {params.index} \
+				--time-unit {params.unit} \
+				--scheme {input.sampling} \
+				--report {output.report} \
+				--output1 {output.list}
+		else
+			echo "The input coverage file {input.coverage} is empty, skipping contextual genome selection."
+			touch {output.report}
+			touch {output.list}
+		fi
 		"""
 
 
 
-rule dataset_go:
-	input:
-		expand("output/sequences/{sample}_dataset.fasta", sample=SAMPLES),
+# rule dataset_go:
+# 	input:
+# 		expand("output/sequences/{sample}_dataset.fasta", sample=SAMPLES),
 
 rule dataset:
 	message:
@@ -238,13 +239,17 @@ rule dataset:
 		dataset = "output/sequences/{sample}_dataset.fasta"
 	shell:
 		"""
-		python add_new_sequences.py \
-			--genomes {input.genomes} \
-			--new-genomes {input.new_genomes} \
-			--keep {input.list} \
-			--output {output.dataset}
+		if [ -s {input.list} ]; then
+			python scripts/add_new_sequences.py \
+				--genomes {input.genomes} \
+				--new-genomes {input.new_genomes} \
+				--keep {input.list} \
+				--output {output.dataset}
+		else
+			echo "The input list file {input.list} is empty, skipping contextual genome filtering."
+			touch {output.dataset}
+		fi
 		"""
-
 
 
 
@@ -258,234 +263,306 @@ rule fix_metadata:
 		blast = files.blast_results
 	params:
 		index = "strain",
-		targets = "serotype#21, genotype#22, major_lineage#23, minor_lineage#24",
+		targets = "serotype#11, genotype#12, major_lineage#13, minor_lineage#14",
 	output:
-		new_metadata = files.new_metadata
+		temp_metadata = "output/metadata/temp_metadata.tsv",
+		new_metadata = "output/metadata/DenV_itps_metadata.tsv",
 	shell:
 		"""
-		python reformat_dataframe.py \
-			--input1 {input.metadata} \
+		sed 's/sample_id/{params.index}/g' {input.metadata} > {output.temp_metadata}
+		
+		python scripts/reformat_dataframe.py \
+			--input1 {output.temp_metadata} \
 			--input2 {input.blast} \
 			--index {params.index} \
 			--action add \
 			--mode columns \
-			--targets {params.targets} \
+			--targets \"{params.targets}\" \
 			--output {output.new_metadata}
 		"""
 
 
-
-# rule lineages_rep:
-# 	message:
-# 		"""
-# 		Getting list of representative genomes per pangolin lineage:
-# 		- Pick one representative genome per lineage
-# 		- Export list with sequence names
-# 		"""
-# 	params:
-# 		download_file = "yes",
-# 	output:
-# 		list = "output_files/sequences/rep_genomes.txt",
-# 	shell:
-# 		"""
-# 		python.nextstrain scripts/get_lineage_reps.py \
-# 			--download {params.download_file} \
-# 			--output {output.list}
-		
-# 		echo Wuhan/Hu-1/2019 >> {output.list}
-# 		echo Wuhan/WH01/2019 >> {output.list}
-# 		"""
-
-
-
-# rule base_dataset:
-# 	message:
-# 		"""
-# 		Export base dataset with genomes and metadata
-# 		"""
+# rule final_dataset_go:
 # 	input:
-# 		genomes = "input_files/gisaid_hcov-19.fasta",
-# 		metadata = "input_files/metadata_nextstrain.tsv",
-# 		list = "output_files/sequences/rep_genomes.txt"
-# 	output:
-# 		base_dataset = "output_files/sequences/base_dataset.fasta",
-# 		base_metadata = "output_files/metadata/base_metadata.tsv"
-# 	shell:
-# 		"""
-	
-# 		python.nextstrain scripts/masterkey.py \
-# 			--input {input.genomes} \
-# 			--format fasta \
-# 			--action keep \
-# 			--list {input.list} \
-# 			--output {output.base_dataset}
+# 		expand("output/sequences/{sample}_dataset.fasta", sample=SAMPLES),
+
+rule final_dataset:
+	message:
+		"""
 		
-# 		python.nextstrain scripts/masterkey.py \
-# 			--input {input.metadata} \
-# 			--format tsv \
-# 			--action keep \
-# 			--index strain \
-# 			--list {input.list} \
-# 			--output {output.base_metadata}
-# 		"""
+		"""
+	input:
+		dataset = rules.dataset.output.dataset,
+		metadata1 = files.metadata_typing,
+		metadata2 = rules.fix_metadata.output.new_metadata
+	output:
+		final_metadata = "output/metadata/{sample}_metadata.tsv",
+		final_genomes = "output/sequences/{sample}_genomes.tsv",
+		rename_file = "output/tree/{sample}_rename.tsv"
+	shell:
+		"""
+		if [ -s {input.dataset} ]; then
+		python scripts/process_metadata.py \
+			--sequences {input.dataset} \
+			--metadata1 {input.metadata1} \
+			--metadata2 {input.metadata2} \
+			--output1 {output.final_metadata} \
+			--output2 {output.final_genomes} \
+			--output3 {output.rename_file}
+		else
+			echo "The input dataset file {input.dataset} is empty, skipping final dataset creation."
+			touch {output.final_metadata}
+			touch {output.final_genomes}
+			touch {output.rename_file}
+		fi
+
+		"""
 
 
-# rule filter_coverage:
-# 	message:
-# 		"""
-# 		Filtering sequence files to:
-# 		- Identify and remove poor quality genomes
-# 		- Generate initial quality assurance matrix
-# 		"""
+# rule aligndb_go:
 # 	input:
-# 		genomes = files.new_genomes
-# 	params:
-# 		size = files.refgenome_size,
-# 		index = "sample_id",
-# 		missing = files.max_missing
-# 	output:
-# 		matrix = "output_files/qa/qa_matrix1.tsv",
-# 		rename = "output_files/sequences/rename.tsv",
-# 		new_sequences = "output_files/sequences/renamed_genomes.fasta"
-# 	shell:
-# 		"""
-# 		python.nextstrain scripts/filter_by_coverage.py \
-# 			--genomes {input.genomes} \
-# 			--index {params.index} \
-# 			--refgenome-size {params.size} \
-# 			--max-missing {params.missing} \
-# 			--output {output.matrix} \
-# 			--output2 {output.rename}
+# 		expand("output/alignment/{sample}_aligned.fasta", sample=SAMPLES),
+
+
+rule aligndb:
+	message:
+		"""
+		Align new genomes and contextual genomes for phylogenetics
+		"""
+	input:
+		genomes = rules.final_dataset.output.final_genomes,
+		existing = rules.align_reference.output.alignment,
+		reference = rules.split.output.refseq,
+		reftable = files.ref_table,
+	params:
+		threads = options.threads,
+		type = "{sample}"
+	output:
+		refname = "output/alignment/{sample}_reflist.txt",
+		msa_noref = "output/alignment/{sample}_existing.fasta",
+		msa_file = "output/alignment/{sample}_aligned.fasta"
+	shell:
+		"""
+		if [ -s {input.existing} ]; then
+			grep {params.type} {input.reftable} | cut -d$'\t' -f 2 > {output.refname}
+
+			python scripts/masterkey.py \
+				--input {input.existing} \
+				--format fasta \
+				--action remove \
+				--list {output.refname} \
+				--output {output.msa_noref}
+
+			augur align \
+				--sequences {input.genomes} \
+				--existing-alignment {output.msa_noref} \
+				--reference-sequence {input.reference} \
+				--nthreads {params.threads} \
+				--output {output.msa_file} \
+				--remove-reference
+		else
+			echo "The input sequences file {input.existing} is empty, skipping alignment."
+			touch {output.refname}
+			touch {output.msa_noref}
+			touch {output.msa_file}
+		fi
+		"""
+
+
+
+# rule mask_go:
+# 	input:
+# 		expand("output/alignment/{sample}_aligned_masked.fasta", sample=SAMPLES),
+
+def denv_utrs(sample):
+	params_dict = {
+		"DenV1": (94, 462),
+		"DenV2": (96, 451),
+		"DenV3": (94, 440),
+		"DenV4": (101, 384)
+	}
+	return params_dict.get(sample, (None, None))
+
+rule mask:
+	message:
+		"""
+		Mask non-coding 5' and 3' regions
+		"""
+	input:
+		sequences = rules.aligndb.output.msa_file
+	params:
+		start=lambda wildcards: denv_utrs(wildcards.sample)[0],
+		end=lambda wildcards: denv_utrs(wildcards.sample)[1],
+	output:
+		masked = "output/alignment/{sample}_aligned_masked.fasta"
+	shell:
+		"""
+		if [ -s {input.sequences} ]; then
+			augur mask \
+				--sequences {input.sequences} \
+				--mask-from-beginning {params.start} \
+				--mask-from-end {params.end} \
+				--output {output.masked}
+		else
+			echo "The input sequences file {input.sequences} is empty, skipping masking step."
+			touch {output.masked}
+		fi
+		"""
+
+
+# rule tree_go:
+# 	input:
+# 		expand("output/tree/{sample}_masked.tree", sample=SAMPLES),
+
+rule tree:
+	message: "Building phylogenetic tree"
+	input:
+		alignment = rules.mask.output.masked
+	params:
+		threads = options.threads,
+		model = parameters.model,
+		bootstrap = parameters.bootstrap,
+	output:
+		tree = "output/tree/{sample}_masked.tree"
+	shell:
+		"""
+		if [ -s {input.alignment} ]; then
+			iqtree \
+				-s {input.alignment} \
+				-b {params.bootstrap} \
+				-nt {params.threads} \
+				-m {params.model}
+
+			mv {input.alignment}.treefile {output.tree}
+		else
+			echo "The input file {input.alignment} is empty, skipping phylogenetic analysis."
+			touch {output.tree}
+		fi
+		"""
+
+
+# rule root2tip_go:
+# 	input:
+# 		expand("output/root2tip/{sample}_outliers.txt", sample=SAMPLES),
+
+rule root2tip:
+	message:
+		"""
+		Perform root-to-tip analysis:
+		  - detect molecular clock outliers
+		  - generate root-to-tip regression plot
+		"""
+	input:
+		tree = rules.tree.output.tree,
+		alignment = rules.mask.output.masked,
+		metadata = rules.final_dataset.output.final_metadata
+	params:
+		clock_filter = parameters.clock_filter,
+		clock_rate = parameters.clock_rate,
+		clock_std_dev = parameters.clock_std_dev,
+		root = parameters.root,
+		outdir = "./output/root2tip"
+	output:
+		rtt_plot = "output/root2tip/{sample}_rtt_plot.pdf",
+		dates = "output/root2tip/{sample}_dates.txt",
+		outliers = "output/root2tip/{sample}_outliers.tsv"
+	shell:
+		"""
+		if [ -s {input.tree} ]; then
+			treetime \
+				--tree {input.tree} \
+				--aln {input.alignment} \
+				--dates {input.metadata} \
+				--clock-filter {params.clock_filter} \
+				--reroot {params.root} \
+				--gtr JC69 \
+				--clock-rate {params.clock_rate} \
+				--clock-std-dev {params.clock_std_dev} \
+				--max-iter 2 \
+				--coalescent skyline \
+				--plot-rtt rtt_plot.pdf \
+				--tip-labels \
+				--verbose 1 \
+				--outdir {params.outdir}
 			
+			mv {params.outdir}/rtt_plot.pdf {output.rtt_plot}
+			mv {params.outdir}/dates.tsv {output.dates}
+			echo "--" >> {output.dates}
+			grep "\-\-" {output.dates} | grep -v NODE | cut -d$'\t' -f 1 > {output.outliers}
+			sed -i '' -e $'1s/^/strain\tseq_quality\\\n/' -e $'1,$s/$/\tNo/' {output.outliers}
+		else
+			echo "The input file {input.tree} is empty, skipping root-to-tip analysis."
+			touch {output.dates}
+			touch {output.outliers}
+			touch {output.rtt_plot}
+		fi
+		"""
+
+
+rule assurance:
+	input:
+		coverage_files = expand("output/coverage/{sample}_coverage.tsv", sample=SAMPLES),
+		outlier_files = expand("output/root2tip/{sample}_outliers.tsv", sample=SAMPLES)
+	params:
+		index = "strain",
+	output:
+		coverage = "output/coverage/matrix_coverage.tsv",
+		outliers = "output/root2tip/matrix_outliers.tsv",
+		matrix = "output/matrix_dengue_qa.tsv"
+	shell:
+		"""
+		# Concatenate coverage files
+		(head -n 1 {input.coverage_files[0]} && tail -n +2 -q {input.coverage_files}) > {output.coverage}
 		
-# 		python.nextstrain scripts/masterkey.py \
-# 			--input {input.genomes} \
-# 			--format fasta \
-# 			--action rename \
-# 			--list {output.rename} \
-# 			--output {output.new_sequences}	
-# 		"""
+		# Concatenate outlier files
+		(head -n 1 {input.outlier_files[0]} && tail -n +2 -q {input.outlier_files}) > {output.outliers}
+
+		# Assuming `qamatrix.py` takes the concatenated files to produce the final matrix
+		python scripts/qamatrix.py \
+			--coverage {output.coverage} \
+			--outliers {output.outliers} \
+			--index {params.index} \
+			--output {output.matrix}
+		"""
 
 
 
-# rule inspect_metadata:
+
+# rule assurance:
 # 	message:
 # 		"""
-# 		Inspecting metadata file to:
-# 		- Detect genomes with missing metadata
-# 		- Expand quality assurance matrix
+# 		Generate the quality assurance matrix
 # 		"""
-# 	input:
-# 		metadata1 = files.corelab_metadata,
-# 		metadata2 = files.sample_metadata,
-# 		metadata3 = files.patient_metadata,
-# 		batch = files.batch_layout,
-# 		matrix1 = rules.filter_coverage.output.matrix
 # 	params:
-# 		index = "sample_id"
+# 		pathc = "output/coverage",
+# 		regexc = "*_coverage.tsv",
+# 		patho = "output/root2tip",
+# 		regexo = "*_outliers.tsv",
+# 		index = "index",
 # 	output:
-# 		metadata = "output_files/metadata/metadata1.tsv",
-# 		matrix = "output_files/qa/qa_matrix2.tsv",
-# 		rename = "output_files/sequences/rename2.tsv"
+# 		coverage = "output/coverage/matrix_coverage.tsv",
+# 		outliers = "output/root2tip/matrix_outliers.tsv",
+# 		matrix = "output/matrix_dengue_qa.tsv"
 # 	shell:
 # 		"""
-# 		python.nextstrain scripts/inspect_metadata.py \
-# 			--metadata1 {input.metadata1} \
-# 			--metadata2 {input.metadata2} \
-# 			--metadata3 {input.metadata3} \
-# 			--batch {input.batch} \
-# 			--index {params.index} \
-# 			--matrix {input.matrix1} \
-# 			--output1 {output.metadata} \
-# 			--output2 {output.matrix} \
-# 			--output3 {output.rename}
-# 		"""
-
-
-
-# rule multifasta:
-# 	message:
-# 		"""
-# 		Combining sequence files as a multifasta file
-# 		"""
-# 	input:
-# 		base_dataset = "output_files/sequences/base_dataset.fasta",
-# 		new_genomes = "output_files/sequences/renamed_genomes.fasta",
-# 		qamatrix = "output_files/qa/qa_matrix2.tsv"
-# 	params:
-# 		format = "fasta"
-# 	output:
-# 		list_seqs = "output_files/sequences/full_genomes_list.txt",
-# 		filtered_seqs = "output_files/sequences/filtered_seqs.fasta",
-# 		combined_seqs = "output_files/sequences/quality_sequences.fasta"
-# 	shell:
-# 		"""
-# 		grep -v FAIL {input.qamatrix} | cut -d$'\t' -f 1 | sed -e 1d > {output.list_seqs}
-
-# 		python.nextstrain scripts/masterkey.py \
-# 			--input {input.new_genomes} \
-# 			--format {params.format} \
-# 			--action keep \
-# 			--list {output.list_seqs} \
-# 			--output {output.filtered_seqs}
-
-# 		cat {input.base_dataset} {output.filtered_seqs} > {output.combined_seqs}
-# 		"""
-
-
-
-# rule combine_metadata:
-# 	message:
-# 		"""
-# 		Combining metadata files
-# 		"""
-# 	input:
-# 		base_metadata = "output_files/metadata/base_metadata.tsv",
-# 		sample_metadata = rules.inspect_metadata.output.metadata
-# 	params:
-# 		index = "strain"
-# 	output:
-# 		combined_metadata = "output_files/metadata/combined_metadata.tsv"
-# 	shell:
-# 		"""
-# 		python.nextstrain scripts/metadata_merger.py \
-# 			--metadata1 {input.base_metadata} \
-# 			--metadata2 {input.sample_metadata} \
-# 			--index {params.index} \
-# 			--output {output.combined_metadata}
-# 		"""
-
-
-
-# ### Aligning the sequences using nextalign
-# rule align:
-# 	message:
-# 		"""
-# 		Aligning sequences to {input.reference}
-# 		    - gaps relative to reference are considered real
-# 		"""
-# 	input:
-# 		sequences = rules.multifasta.output.combined_seqs,
-# 		map = files.genemap,
-# 		reference = files.reference
-# 	params:
-# 		threads = options.threads
-# 	output:
-# 		alignment = "output_files/sequences/aligned.fasta",
-# 		insertions = "output_files/sequences/insertions.csv"
-# 	shell:
-# 		"""
-# 		nextalign \
-# 			--sequences {input.sequences} \
-# 			--reference {input.reference} \
-# 			--genemap {input.map} \
-# 			--genes E,M,N,ORF10,ORF14,ORF1a,ORF1b,ORF3a,ORF6,ORF7a,ORF7b,ORF8,ORF9b,S \
-# 			--output-dir output_files/sequences/ \
-# 			--output-basename nextalign
+# 		python scripts/multi_merger.py \
+# 			--path {params.pathc} \
+# 			--regex {params.regexc} \
+# 			--output {output.coverage}
 		
-# 		mv output_files/sequences/nextalign.aligned.fasta {output.alignment}
-# 		mv output_files/sequences/nextalign.insertions.csv {output.insertions}
+# 		python scripts/multi_merger.py \
+# 			--path {params.patho} \
+# 			--regex {params.regexo} \
+# 			--output {output.outliers}
+		
+# 		python scripts/qamatrix.py \
+# 			--coverage output/coverage/DenV1_coverage.tsv \
+# 			--outliers output/root2tip/DenV1_outliers.tsv \
+# 			--index {params.index}
+# 			--output {output.matrix} \
+
 # 		"""
+
 
 
 
@@ -542,133 +619,6 @@ rule fix_metadata:
 # 			--action rename \
 # 			--list {input.rename_file} \
 # 			--output {output.ren_sequences}	
-# 		"""
-
-
-
-# rule pangolin:
-# 	message:
-# 		"""
-# 		Assign pango lineages to core lab sequences
-# 		"""
-# 	input:
-# 		corelab_seq = rules.mutations.output.corelab_alignment,
-# 		metadata = rules.inspect_metadata.output.metadata,
-# 		qamatrix3 = rules.mutations.output.matrix
-# 	params:
-# 		threads = options.threads,
-# 		index = "sample_id"
-# 	output:
-# 		report = "output_files/metadata/lineage_report.csv",
-# 		matrix = "output_files/qa/qa_matrix4.tsv",
-# 		metadata = "output_files/assured_data/metadata.tsv"
-# 	shell:
-# 		"""
-# 		pangolin \
-# 			{input.corelab_seq} \
-# 			--threads {params.threads} \
-# 			--outfile {output.report}
-		
-# 		python.nextstrain scripts/inspect_lineages.py \
-# 			--lineages {output.report} \
-# 			--metadata {input.metadata} \
-# 			--matrix {input.qamatrix3} \
-# 			--index {params.index} \
-# 			--output1 {output.matrix} \
-# 			--output2 {output.metadata}
-# 		"""
-
-
-
-# ### Masking alignment sites
-# rule mask:
-# 	message:
-# 		"""
-# 		Mask bases in alignment
-# 		  - masking {params.mask_from_beginning} from beginning
-# 		  - masking {params.mask_from_end} from end
-# 		  - masking other sites: {params.mask_sites}
-# 		"""
-# 	input:
-# 		alignment = rules.mutations.output.ren_sequences
-# 	params:
-# 		mask_from_beginning = 55,
-# 		mask_from_end = 100,
-# 		mask_sites = "150 153 635 1707 1895 2091 2094 2198 2604 3145 3564 3639 3778 4050 5011 5257 5736 5743 5744 6167 6255 6869 8022 8026 8790 8827 8828 9039 10129 10239 11074 11083 11535 13402 13408 13476 13571 14277 15435 15922 16290 16887 19298 19299 19484 19548 20056 20123 20465 21550 21551 21575 22335 22516 22521 22661 22802 24389 24390 24622 24933 25202 25381 26549 27760 27761 27784 28253 28985 29037 29039 29425 29553 29827 29830"
-# 	output:
-# 		alignment = "output_files/tree/masked_alignment.fasta"
-# 	shell:
-# 		"""
-# 		python.nextstrain scripts/mask-alignment.py \
-# 			--alignment {input.alignment} \
-# 			--mask-from-beginning {params.mask_from_beginning} \
-# 			--mask-from-end {params.mask_from_end} \
-# 			--mask-sites {params.mask_sites} \
-# 			--output {output.alignment}
-# 		"""
-
-
-
-# ### Inferring Maximum Likelihood tree using the default software (IQTree)
-
-# rule tree:
-# 	message: "Building tree"
-# 	input:
-# 		alignment = rules.mask.output.alignment
-# 	params:
-# 		threads = options.threads
-# 	output:
-# 		tree = "output_files/tree/tree_raw.nwk"
-# 	shell:
-# 		"""
-# 		augur tree \
-# 			--alignment {input.alignment} \
-# 			--nthreads {params.threads} \
-# 			--output {output.tree}
-# 		"""
-
-
-
-# ### Running TreeTime to estimate time for ancestral genomes
-
-# rule root2tip:
-# 	message:
-# 		"""
-# 		Perform root-to-tip analysis:
-# 		  - detect molecular clock outliers
-# 		  - generate root-to-tip regression plot
-# 		"""
-# 	input:
-# 		tree = rules.tree.output.tree,
-# 		alignment = rules.mask.output.alignment,
-# 		metadata = rules.combine_metadata.output.combined_metadata
-# 	params:
-# 		clock_rate = 0.0008,
-# 		clock_std_dev = 0.0004,
-# 		root = "Wuhan/Hu-1/2019 Wuhan/WH01/2019",
-# 		outdir = "./output_files/root2tip"
-# 	output:
-# 		outliers = "output_files/root2tip/outliers_list.txt"
-# 	shell:
-# 		"""
-# 		treetime \
-# 			--tree {input.tree} \
-# 			--aln {input.alignment} \
-# 			--dates {input.metadata} \
-# 			--clock-filter 3 \
-# 			--reroot {params.root} \
-# 			--gtr JC69 \
-# 			--clock-rate {params.clock_rate} \
-# 			--clock-std-dev {params.clock_std_dev} \
-# 			--max-iter 2 \
-# 			--coalescent skyline \
-# 			--plot-rtt root2tip_plot.pdf \
-# 			--tip-labels \
-# 			--verbose 1 \
-# 			--outdir {params.outdir}
-		
-# 		echo "--" >> {params.outdir}/dates.tsv
-# 		grep "\-\-" {params.outdir}/dates.tsv | cut -d$'\t' -f 1 > {output.outliers}
 # 		"""
 
 
