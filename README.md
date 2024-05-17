@@ -48,7 +48,9 @@ Using this pipeline, the quality assurance report reveals important statistics t
 
 The molecular clock quality analysis (1) aims to identify genomes whose evolutionary rates deviate more than 10 interquartile ranges from the trend line produced by high-quality genomes. This cutoff is rather permissive, and was set on purpose to avoid exclusion of genomes that may have naturally higher evolutionary rates.
 
-The genome coverage analysis (2) aimes to identify genomes with less than 70% coverage, the minimum cutoff used for submitting the sequence as 'complete genome' or 'near-complete genome' to public databases. When sequences have less than 70% coverage, specific genomic fragments are evaluated for possible submission as partial sequences, thery are: the C-prM-E region (~2300 bp) and the viral envelope region (E, ~1500 bp). In this order, if any of the regions have at least 95% coverage, it could be submitted to databases as genomic fragments, still relevant for specific analyses.
+The genome coverage analysis (2) aims to identify genomes with less than 70% coverage, the minimum cutoff used for submitting the sequence as 'complete genome' or 'near-complete genome' to public databases. When sequences have less than 70% coverage, specific genomic fragments are evaluated for possible submission as partial sequences, thery are: the C-prM-E region (~2300 bp) and the viral envelope region (E, ~1500 bp) (see image below). In this order, if any of the regions have at least 95% coverage, it could be submitted to databases as genomic fragments, still relevant for specific analyses.
+
+![alt text](https://github.com/InstitutoTodosPelaSaude/dengueQA/blob/main/assets/coverage_criteria.png)
 
 ## Author
 
