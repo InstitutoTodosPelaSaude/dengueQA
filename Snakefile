@@ -11,18 +11,20 @@ rule all:
 		qa_matrix = "output/matrix_dengue_qa.tsv",
 		coverage_matrix = "output/coverage/matrix_coverage.tsv",
 		outliers_matrix = "output/root2tip/matrix_outliers.tsv",
-		trees = expand("output/tree/{sample}_masked.tree", sample=SAMPLES)
+		trees1 = expand("output/tree/{sample}_masked.tree", sample=SAMPLES),
+		trees2 = expand("output/tree/{sample}_masked_renamed.tree", sample=SAMPLES)
+
 
 # Define file names
 rule files:
 	params:
 		new_genomes = "input/new_genomes.fasta",
-		orig_metadata = "input/pt_BR_all_itps_dengue-0-20240329000013.tsv",
+		orig_metadata = "input/metadata.tsv",
 		references = "references/fasta/reference_genomes.fasta",
-		ref_typing = "references/fasta/reference_typing_s2.fasta",
+		ref_typing = "references/fasta/reference_typing_s3.fasta",
 		ref_table = "references/fasta/reference_table.tsv",
 		blast_results = "output/blast/blast_results.tsv",
-		metadata_typing = "references/metadata/table_ncbi_s2.tsv",
+		metadata_typing = "references/metadata/table_ncbi_s3.tsv",
 		ref_dataset = "references/fasta/DenV_genomes_ncbi.fasta",
 files = rules.files.params
 
@@ -33,10 +35,10 @@ rule parameters:
 		evalue = 1e-10,
 		bootstrap = 1, # default = 1, but ideally it should be >= 100
 		model = "GTR",
-		clock_filter = 7,
+		clock_filter = 10,
 		clock_rate = 0.0007,
 		clock_std_dev = 0.00004,
-		root = "least-squares"#"min_dev"#
+		root = "least-squares"
 parameters = rules.parameters.params
 
 
@@ -74,10 +76,6 @@ rule blast:
 		"""
 
 
-# rule split_go:
-# 	input:
-# 		expand("output/sequences/{sample}_newsequences.fasta", sample=SAMPLES),
-
 rule split:
 	message:
 		"""
@@ -112,11 +110,6 @@ rule split:
 		"""
 
 
-
-# rule alignref_go:
-# 	input:
-# 		expand("output/alignment/{sample}_alignref.fasta", sample=SAMPLES),
-
 rule align_reference:
 	message:
 		"""
@@ -143,10 +136,6 @@ rule align_reference:
 		fi
 		"""
 
-
-# rule coverage_go:
-# 	input:
-# 		expand("output/coverage/{sample}_coverage.tsv", sample=SAMPLES),
 
 rule coverage:
 	message:
@@ -183,11 +172,6 @@ rule coverage:
 		"""
 
 
-
-# rule selection_go:
-# 	input:
-# 		expand("output/sequences/{sample}_list.txt", sample=SAMPLES),
-
 rule selection:
 	message:
 		"""
@@ -220,11 +204,6 @@ rule selection:
 		fi
 		"""
 
-
-
-# rule dataset_go:
-# 	input:
-# 		expand("output/sequences/{sample}_dataset.fasta", sample=SAMPLES),
 
 rule dataset:
 	message:
@@ -282,10 +261,6 @@ rule fix_metadata:
 		"""
 
 
-# rule final_dataset_go:
-# 	input:
-# 		expand("output/sequences/{sample}_dataset.fasta", sample=SAMPLES),
-
 rule final_dataset:
 	message:
 		"""
@@ -315,13 +290,7 @@ rule final_dataset:
 			touch {output.final_genomes}
 			touch {output.rename_file}
 		fi
-
 		"""
-
-
-# rule aligndb_go:
-# 	input:
-# 		expand("output/alignment/{sample}_aligned.fasta", sample=SAMPLES),
 
 
 rule aligndb:
@@ -369,11 +338,6 @@ rule aligndb:
 		"""
 
 
-
-# rule mask_go:
-# 	input:
-# 		expand("output/alignment/{sample}_aligned_masked.fasta", sample=SAMPLES),
-
 def denv_utrs(sample):
 	params_dict = {
 		"DenV1": (94, 462),
@@ -410,10 +374,6 @@ rule mask:
 		"""
 
 
-# rule tree_go:
-# 	input:
-# 		expand("output/tree/{sample}_masked.tree", sample=SAMPLES),
-
 rule tree:
 	message: "Building phylogenetic tree"
 	input:
@@ -440,10 +400,6 @@ rule tree:
 		fi
 		"""
 
-
-# rule root2tip_go:
-# 	input:
-# 		expand("output/root2tip/{sample}_outliers.txt", sample=SAMPLES),
 
 rule root2tip:
 	message:
@@ -526,132 +482,31 @@ rule assurance:
 		"""
 
 
-
-
-# rule assurance:
-# 	message:
-# 		"""
-# 		Generate the quality assurance matrix
-# 		"""
-# 	params:
-# 		pathc = "output/coverage",
-# 		regexc = "*_coverage.tsv",
-# 		patho = "output/root2tip",
-# 		regexo = "*_outliers.tsv",
-# 		index = "index",
-# 	output:
-# 		coverage = "output/coverage/matrix_coverage.tsv",
-# 		outliers = "output/root2tip/matrix_outliers.tsv",
-# 		matrix = "output/matrix_dengue_qa.tsv"
-# 	shell:
-# 		"""
-# 		python scripts/multi_merger.py \
-# 			--path {params.pathc} \
-# 			--regex {params.regexc} \
-# 			--output {output.coverage}
-		
-# 		python scripts/multi_merger.py \
-# 			--path {params.patho} \
-# 			--regex {params.regexo} \
-# 			--output {output.outliers}
-		
-# 		python scripts/qamatrix.py \
-# 			--coverage output/coverage/DenV1_coverage.tsv \
-# 			--outliers output/root2tip/DenV1_outliers.tsv \
-# 			--index {params.index}
-# 			--output {output.matrix} \
-
-# 		"""
-
-
-
-
-# ### Detect genetic changes and potential sequencing errors
-# rule mutations:
-# 	message:
-# 		"""
-# 		Extract mutations from multiple sequence alignment
-# 		"""
-# 	input:
-# 		alignment = rules.align.output.alignment,
-# 		annotation = files.annotation,
-# 		rename_file = rules.inspect_metadata.output.rename,
-# 		qamatrix2 = rules.inspect_metadata.output.matrix,
-# 		insertions = rules.align.output.insertions
-# 	params:
-# 		index = "sample_id",
-# 		format = "fasta"
-# 	output:
-# 		list = "output_files/sequences/listseqs.txt",
-# 		corelab_alignment = "output_files/sequences/corelab_aligned.fasta",
-# 		mutations = "output_files/sequences/mutations.tsv",
-# 		matrix = "output_files/qa/qa_matrix3.tsv",
-# 		ren_sequences = "output_files/sequences/renamed_seqs.fasta"
-# 	shell:
-# 		"""
-# 		cut -d$'\t' -f 1 {input.rename_file} > {output.list}
-# 		echo Wuhan/Hu-1/2019 >> {output.list}
-		
-# 		python.nextstrain scripts/masterkey.py \
-# 			--input {input.alignment} \
-# 			--format {params.format} \
-# 			--action keep \
-# 			--list {output.list} \
-# 			--output {output.corelab_alignment}
-
-# 		python.nextstrain scripts/get_mutations.py \
-# 			--input {output.corelab_alignment} \
-# 			--annotation {input.annotation} \
-# 			--ref-name "Wuhan/Hu-1/2019" \
-# 			--ignore ambiguity synonymous \
-# 			--output {output.mutations}
-			
-# 		python.nextstrain scripts/inspect_mutations.py \
-# 			--matrix {input.qamatrix2} \
-# 			--index {params.index} \
-# 			--mutations {output.mutations} \
-# 			--insertions {input.insertions} \
-# 			--output {output.matrix}
-		
-# 		python.nextstrain scripts/masterkey.py \
-# 			--input {input.alignment} \
-# 			--format {params.format} \
-# 			--action rename \
-# 			--list {input.rename_file} \
-# 			--output {output.ren_sequences}	
-# 		"""
-
-
-
-# rule assurance:
-# 	message:
-# 		"""
-# 		Perform last step of quality assurance:
-# 		  - generate final QA matrix
-# 		  - move sequence and metadata files to final directory
-# 		"""
-# 	input:
-# 		qamatrix4 = rules.pangolin.output.matrix,
-# 		outliers = rules.root2tip.output.outliers,
-# 		lineage_seqs = "output_files/sequences/rep_genomes.txt",
-# 		genomes = rules.multifasta.output.filtered_seqs
-# 	params:
-# 		index = "sample_id",
-# 		format = "fasta"
-# 	output:
-# 		qamatrix = "output_files/assured_data/qa_matrix.tsv",
-# 		quality_seqs = "output_files/sequences/sequences.fasta"
-# 	shell:
-# 		"""
-# 		python.nextstrain scripts/get_QAmatrix.py \
-# 			--matrix {input.qamatrix4} \
-# 			--genomes {input.genomes} \
-# 			--outliers {input.outliers} \
-# 			--index {params.index} \
-# 			--output1 {output.qamatrix} \
-# 			--output2 {output.quality_seqs}
-# 		"""
-
+rule tempest:
+	message:
+		"""
+		Inspect root-to-tip results using TemPest
+		"""
+	input:
+		tree = rules.tree.output.tree,
+		metadata = rules.final_dataset.output.final_metadata
+	output:
+		tree = "output/tree/{sample}_masked_renamed.tree"
+	shell:
+		"""
+		if [ -s {input.tree} ]; then
+		python scripts/meta_rename.py \
+			--input {input.tree} \
+			--format tree \
+			--metadata {input.metadata} \
+			--column strain country_code date \
+			--separator "|" \
+			--output {output.tree}
+		else
+			echo "The input file {input.tree} is empty, skipping TempEst analysis."
+			touch {output.tree}
+		fi
+		"""
 
 ### Clearing the working directory (only executed when needed)
 

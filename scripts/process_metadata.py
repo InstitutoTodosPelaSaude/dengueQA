@@ -299,9 +299,9 @@ if __name__ == '__main__':
 
     # print(outputDF)
 
-    # # fix date format
-    # outputDF['date'] = pd.to_datetime(outputDF['date']) 
-    # outputDF['date'] = outputDF['date'].dt.strftime('%Y-%m-%d')
+    # fix date format
+    outputDF['date'] = pd.to_datetime(outputDF['date']) 
+    outputDF['date'] = outputDF['date'].dt.strftime('%Y-%m-%d')
 
     # write new metadata files
     outputDF.to_csv(output1, sep='\t', index=False)
