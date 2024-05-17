@@ -38,6 +38,18 @@ The pipeline consists of the following steps:
 8. **Phylogenetic analysis**: Align genomes (`augur align`), mask 5' and 3' untranslated regions (`augur mask`), build phylogenetic trees (`iqtree`), and perform root-to-tip analysis (`treetime`).
 9. **Quality assurance**: Generate quality assurance report containing information about genomic coverage (flagging low coverage coding regions (CDS) and whole genomes) and sequence quality (flagging molecular clock outliers).
 
+
+## Sequence quality criteria
+
+Using this pipeline, the quality assurance report reveals important statistics to evaluate genomes under the following criteria:
+
+(1) Evolutionary rates with strong deviations from the molecular clock
+(2) Minimum coverage of both whole genome and specific coding regions.
+
+The molecular clock quality analysis (1) aims to identify genomes whose evolutionary rates deviate more than 10 interquartile ranges from the trend line produced by high-quality genomes. This cutoff is rather permissive, and was set on purpose to avoid exclusion of genomes that may have naturally higher evolutionary rates.
+
+The genome coverage analysis (2) aimes to identify genomes with less than 70% coverage, the minimum cutoff used for submitting the sequence as 'complete genome' or 'near-complete genome' to public databases. When sequences have less than 70% coverage, specific genomic fragments are evaluated for possible submission as partial sequences, thery are: the C-prM-E region (~2300 bp) and the viral envelope region (E, ~1500 bp). In this order, if any of the regions have at least 95% coverage, it could be submitted to databases as genomic fragments, still relevant for specific analyses.
+
 ## Author
 
 * **Anderson Brito, Instituto Todos pela Saúde (ITpS)** - [Website](https://www.itps.org.br/membros) - anderson.brito@itps.org.br
