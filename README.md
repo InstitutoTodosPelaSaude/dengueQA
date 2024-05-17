@@ -57,7 +57,9 @@ The molecular clock quality analysis (1) aims to identify genomes whose evolutio
 
 The genome coverage analysis (2) aims to identify genomes with less than 70% coverage, the minimum cutoff used for submitting the sequence as 'complete genome' or 'near-complete genome' to public databases. When sequences have less than 70% coverage, specific genomic fragments are evaluated for possible submission as partial sequences, thery are: the C-prM-E region (~2300 bp) and the viral envelope region (E, ~1500 bp) (see image below). In this order, if any of the regions have at least 95% coverage, it could be submitted to databases as genomic fragments, still relevant for specific analyses.
 
-![alt text](https://github.com/InstitutoTodosPelaSaude/dengueQA/blob/main/assets/coverage_criteria.png)
+<div style="text-align: center;">
+    <img src="assets/coverage_criteria.png" alt="Root-to-tip analysis" width="600">
+</div>
 > Examples of sequences of interest for submission to public genomic databases, according to their levels of completeness.
 
 ## Author
