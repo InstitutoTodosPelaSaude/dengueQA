@@ -43,8 +43,8 @@ The pipeline consists of the following steps:
 
 Using this pipeline, the quality assurance report reveals important statistics to evaluate genomes under the following criteria:
 
-(1) Evolutionary rates with strong deviations from the molecular clock
-(2) Minimum coverage of both whole genome and specific coding regions.
+1. Evolutionary rates with strong deviations from the molecular clock
+2. Minimum coverage of both whole genome and specific coding regions.
 
 The molecular clock quality analysis (1) aims to identify genomes whose evolutionary rates deviate more than 10 interquartile ranges from the trend line produced by high-quality genomes. This cutoff is rather permissive, and was set on purpose to avoid exclusion of genomes that may have naturally higher evolutionary rates.
 
