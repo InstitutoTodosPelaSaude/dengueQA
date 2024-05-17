@@ -1,6 +1,6 @@
 # dengueQA - a pipeline for quality assurance of consensus dengue virus genomes
 
-This pipeline processes dengue virus sequencing data, performing genotyping, sequence alignments, genome coverage calculations, and molecular clock analyses.
+This pipeline processes dengue virus sequencing data to perform quality assurance of genomic data. To do so it runs steps of genotyping, sequence alignment, genome coverage calculation, and molecular clock analysis.
 
 ## Installation
 
