@@ -49,7 +49,7 @@ Using this pipeline, the quality assurance report reveals important statistics t
 The molecular clock quality analysis (1) aims to identify genomes whose evolutionary rates deviate more than 10 interquartile ranges from the trend line produced by high-quality genomes. This cutoff is rather permissive, and was set on purpose to avoid exclusion of genomes that may have naturally higher evolutionary rates.
 
 <div style="text-align: center;">
-    <img src="assets/root2tip_criteria.png" alt="Root-to-tip analysis" width="600">
+    <img src="assets/root2tip_criteria.png" alt="Root-to-tip analysis" width="500">
 </div>
 
 > In this example, the correlation between genetic distance (y axis) and time (x axis) of the root-to-tip molecular clock analysis identified one sequence with evolutionary rate the deviates from the expected, being flagged as a potentially low quality sequence.
