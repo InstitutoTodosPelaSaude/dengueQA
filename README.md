@@ -60,6 +60,7 @@ The genome coverage analysis (2) aims to identify genomes with less than 70% cov
 <div style="text-align: center;">
     <img src="assets/coverage_criteria.png" alt="Root-to-tip analysis" width="600">
 </div>
+
 > Examples of sequences of interest for submission to public genomic databases, according to their levels of completeness.
 
 ## Author
