@@ -55,7 +55,7 @@ The molecular clock quality analysis (1) aims to identify genomes whose evolutio
 > In this example, the correlation between genetic distance (y axis) and time (x axis) of the root-to-tip molecular clock analysis identified one sequence with evolutionary rate the deviates from the expected, being flagged as a potentially low quality sequence.
 
 
-The genome coverage analysis (2) aims to identify genomes with less than 70% coverage, the minimum cutoff used for submitting the sequence as 'complete genome' or 'near-complete genome' to public databases. When sequences have less than 70% coverage, specific genomic fragments are evaluated for possible submission as partial sequences, thery are: the C-prM-E region (~2300 bp) and the viral envelope region (E, ~1500 bp) (see image below). In this order, if any of the regions have at least 95% coverage, it could be submitted to databases as genomic fragments, still relevant for specific analyses.
+The genome coverage analysis (2) aims to identify genomes with less than 70% coverage, the minimum cutoff used for submitting the sequence as 'complete genome' or 'near-complete genome' to public databases. When sequences have less than 70% coverage, specific genomic fragments are evaluated for possible submission as partial sequences, thery are: the C-prM-E region (~2300 bp) and the viral envelope region (E, ~1500 bp) (see image below). In this order, if any of these regions have at least 95% coverage, it could be submitted to databases as genomic fragments, still relevant for specific analyses.
 
 <div style="text-align: center;">
     <img src="assets/coverage_criteria.png" alt="Root-to-tip analysis" width="600">
